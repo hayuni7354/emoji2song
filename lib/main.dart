@@ -846,7 +846,7 @@ class _EditEmotionDialogState extends State<_EditEmotionDialog> {
 
             const SizedBox(height: 20),
 
-            // 3. 노래 목록
+            // 3. 노래 목록.
             Text(
               '노래 목록 (${_songs.length}개)',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
