@@ -70,6 +70,9 @@ class _MainScreenState extends State<MainScreen> {
   double _currentPosition = 0.0;
   double _totalDuration = 180.0; // 3분 0초
 
+  // ⭐ 안내 메시지 표시 상태
+  bool _showNoSongMessage = false;
+
   // 시간(초)을 "분:초" 형식의 문자열로 변환하는 헬퍼 함수
   String _formatDuration(double seconds) {
     if (seconds.isNaN || seconds.isInfinite) return '0:00';
@@ -88,15 +91,30 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
-    final songs = emotion['songs'] as List<Map<String, dynamic>>;
+    final songs = List<Map<String, dynamic>>.from(emotion['songs']);
+
     if (songs.isEmpty) {
+      // ⭐ 노래가 없을 경우 안내 메시지 표시
       setState(() {
-        _currentSong = '${emotion['name']}에 할당된 노래가 없습니다.';
-        _currentEmotion = emotion['icon'] as String;
+        // 수정됨: 하단 바에 특정 메시지 대신 '재생 중인 노래 없음' 상태 유지
+        _currentSong = '재생 중인 노래 없음';
+        _currentEmotion = '';
         _isPlaying = false;
         _currentPosition = 0.0;
-        _totalDuration = 180.0; // 기본값 유지
+        _totalDuration = 180.0;
+
+        _showNoSongMessage = true;
       });
+
+      // 2초 후 메시지 숨김
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _showNoSongMessage = false;
+          });
+        }
+      });
+
       return;
     }
 
@@ -111,6 +129,7 @@ class _MainScreenState extends State<MainScreen> {
       _currentSong = '$songTitle - $songArtist';
       _isPlaying = true; // 노래 재생 시작
       _currentPosition = 0.0; // 새 노래 시작 시 재생 위치 초기화
+      _showNoSongMessage = false; // 재생 시 메시지 숨김
     });
 
     print('▶️ ${emotion['name']} 감정으로 $songTitle (무작위) 재생 시작');
@@ -137,6 +156,7 @@ class _MainScreenState extends State<MainScreen> {
       _currentEmotion = '';
       _isPlaying = false;
       _currentPosition = 0.0;
+      _showNoSongMessage = false; // 중지 시 메시지 숨김
     });
     print('⏹️ 노래 재생 중지 및 상태 초기화');
   }
@@ -146,6 +166,7 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       emotionData.removeWhere((e) => e['id'] == id);
       _deletingEmotionId = null; // 삭제 후 상태 리셋
+      _showNoSongMessage = false; // 삭제 시 메시지 숨김
 
       // 삭제된 이모지가 현재 재생 중인 이모지였다면 상태 초기화
       if (emotionData.every((e) => e['icon'] != _currentEmotion)) {
@@ -332,40 +353,77 @@ class _MainScreenState extends State<MainScreen> {
 
   // 배경 탭 시 삭제 대기 상태 리셋을 위한 위젯
   Widget _buildBodyContent(BuildContext context) {
-    return Column(
+    return Stack( // ⭐ Stack을 사용하여 메시지 오버레이 구현
       children: <Widget>[
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              if (_deletingEmotionId != null) {
-                setState(() {
-                  _deletingEmotionId = null;
-                  print('삭제 대기 상태 리셋');
-                });
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10.0,
-                  mainAxisSpacing: 10.0,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: emotionData.length,
-                itemBuilder: (context, index) {
-                  final emotion = emotionData[index];
-                  return _buildEmotionTile(emotion);
+        Column(
+          children: <Widget>[
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  if (_deletingEmotionId != null) {
+                    setState(() {
+                      _deletingEmotionId = null;
+                    });
+                  }
                 },
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 10.0,
+                      mainAxisSpacing: 10.0,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: emotionData.length,
+                    itemBuilder: (context, index) {
+                      final emotion = emotionData[index];
+                      return _buildEmotionTile(emotion);
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            _buildAddEmotionButton(),
+            _buildPlaybackBar(),
+          ],
+        ),
+
+        // ⭐ 안내 메시지 오버레이
+        Positioned(
+          bottom: 120, // 하단 재생 바 위에 위치
+          left: 0,
+          right: 0,
+          child: AnimatedOpacity(
+            opacity: _showNoSongMessage ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7), // 검은색 배경
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  '노래를 추가해 주세요!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-
-        _buildAddEmotionButton(),
-
-        _buildPlaybackBar(),
       ],
     );
   }
@@ -412,13 +470,12 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 하단 재생 바 위젯 (대폭 수정됨)
+  // 하단 재생 바 위젯 (수정됨)
   Widget _buildPlaybackBar() {
     final isActive = _currentSong != '재생 중인 노래 없음';
     final playPauseIcon = _isPlaying ? Icons.pause : Icons.play_arrow;
 
     return Container(
-      // 높이를 늘려 진행바와 버튼을 모두 담습니다.
       padding: const EdgeInsets.only(top: 8.0, bottom: 10.0, left: 10.0, right: 10.0),
       decoration: const BoxDecoration(
         color: Color(0xFF333333),
@@ -427,32 +484,45 @@ class _MainScreenState extends State<MainScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 1. 진행바 및 시간 표시
-          // ⭐ isActive 여부와 관계없이 공간을 확보하기 위해 Container/Row 사용
           Row(
             children: [
               Text(
                 _formatDuration(_currentPosition), // 현재 시각
-                style: TextStyle(color: isActive ? Colors.white70 : Colors.transparent, fontSize: 12),
+                style: TextStyle(
+                  color: isActive ? Colors.white70 : Colors.transparent,
+                  fontSize: 18,
+                ),
               ),
               Expanded(
-                child: Slider(
-                  value: _currentPosition,
-                  min: 0.0,
-                  max: _totalDuration,
-                  activeColor: isActive ? appBarColor : Colors.grey.shade700, // 비활성화 시 회색
-                  inactiveColor: Colors.grey.shade700,
-                  onChanged: isActive ? (newValue) { // 활성화 상태일 때만 슬라이더 조정 가능
-                    // 진행바를 눌러 시각 조정 시뮬레이션
-                    setState(() {
-                      _currentPosition = newValue;
-                    });
-                    print('🔊 시각 조정: ${_formatDuration(newValue)}');
-                  } : null, // 비활성화 상태일 때는 null
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: appBarColor,
+                    inactiveTrackColor: Colors.grey.shade700,
+                    thumbColor: appBarColor,
+                    overlayColor: appBarColor.withOpacity(0.4),
+                    // 비활성 상태일 때 thumbShape와 overlayShape를 아예 없애버림
+                    thumbShape: isActive ? const RoundSliderThumbShape(enabledThumbRadius: 6.0) : SliderComponentShape.noThumb,
+                    overlayShape: isActive ? const RoundSliderOverlayShape(overlayRadius: 14.0) : SliderComponentShape.noOverlay,
+                  ),
+                  child: Slider(
+                    value: _currentPosition,
+                    min: 0.0,
+                    max: _totalDuration,
+                    onChanged: isActive ? (newValue) {
+                      setState(() {
+                        _currentPosition = newValue;
+                      });
+                      print('🔊 시각 조정: ${_formatDuration(newValue)}');
+                    } : null,
+                  ),
                 ),
               ),
               Text(
                 _formatDuration(_totalDuration), // 노래 전체 시각
-                style: TextStyle(color: isActive ? Colors.white70 : Colors.transparent, fontSize: 12),
+                style: TextStyle(
+                  color: isActive ? Colors.white70 : Colors.transparent,
+                  fontSize: 18,
+                ),
               ),
             ],
           ),
@@ -463,7 +533,7 @@ class _MainScreenState extends State<MainScreen> {
               // 이모지 및 노래 정보
               Text(
                 _currentEmotion,
-                style: const TextStyle(fontSize: 24, color: Colors.white),
+                style: const TextStyle(fontSize: 36, color: Colors.white), // 폰트 24 -> 36
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -472,14 +542,14 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     const Text(
                       '현재 재생 중:',
-                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                      style: TextStyle(color: Colors.white70, fontSize: 15), // 폰트 10 -> 15
                     ),
                     Text(
                       _currentSong,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 24, // 폰트 16 -> 24
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -487,15 +557,15 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
-              // ⭐ 중지 버튼 (Stop)
+              // 중지 버튼
               IconButton(
-                icon: const Icon(Icons.stop, color: Colors.white, size: 30),
-                onPressed: _stopPlayback, // 중지 로직 연결
+                icon: const Icon(Icons.stop, color: Colors.white, size: 45), // 아이콘 30 -> 45
+                onPressed: isActive ? _stopPlayback : null,
               ),
-              // ⭐ 재생/일시 정지 버튼 (Play/Pause)
+              // 재생/일시 정지 버튼
               IconButton(
-                icon: Icon(playPauseIcon, color: Colors.white, size: 30),
-                onPressed: _togglePlayPause,
+                icon: Icon(playPauseIcon, color: Colors.white, size: 45), // 아이콘 30 -> 45
+                onPressed: isActive ? _togglePlayPause : null,
               ),
             ],
           ),
@@ -846,7 +916,7 @@ class _EditEmotionDialogState extends State<_EditEmotionDialog> {
 
             const SizedBox(height: 20),
 
-            // 3. 노래 목록..
+            // 3. 노래 목록
             Text(
               '노래 목록 (${_songs.length}개)',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
