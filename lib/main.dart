@@ -14,19 +14,17 @@ Color hexToColor(String code) {
 final Color appBarColor = hexToColor('#8EFFE0');
 
 // 더미 데이터: 이모지와 할당된 노래 목록
-// NOTE: 고유 식별자(id)를 추가하여 삭제/수정 시 사용합니다.
 List<Map<String, dynamic>> emotionData = [
-  {'id': 'e1', 'icon': '😀', 'name': '행복', 'songs': [{'title': 'Happy Song 1', 'artist': 'Artist A'}, {'title': 'Happy Song 2', 'artist': 'Artist B'}, {'title': 'Happy Song 3', 'artist': 'Artist C'}]},
-  {'id': 'e2', 'icon': '😢', 'name': '슬픔', 'songs': [{'title': 'Someone Like You', 'artist': 'Adele'}, {'title': 'The Night We Met', 'artist': 'Lord Huron'}]},
-  {'id': 'e3', 'icon': '🤩', 'name': '신남', 'songs': [{'title': 'Uptown Funk', 'artist': 'Mark Ronson'}]},
-  {'id': 'e4', 'icon': '🧘', 'name': '평온', 'songs': [{'title': 'Calm Instrumental', 'artist': 'Various'}]},
-  {'id': 'e5', 'icon': '😡', 'name': '분노', 'songs': []}, // 노래 없는 감정
-  {'id': 'e6', 'icon': '😴', 'name': '피곤', 'songs': [{'title': 'Lullaby', 'artist': 'Sleepy Tunes'}]},
+  {'id': 'e1', 'icon': '😀', 'name': '행복', 'songs': [{'title': 'Happy Song 1', 'artist': 'Artist A', 'url': 'https://example.com/song1.mp3'}, {'title': 'Happy Song 2', 'artist': 'Artist B', 'url': 'https://example.com/song2.mp3'}]},
+  {'id': 'e2', 'icon': '😢', 'name': '슬픔', 'songs': [{'title': 'Someone Like You', 'artist': 'Adele', 'url': 'https://example.com/adele.mp3'}]},
+  {'id': 'e3', 'icon': '🤩', 'name': '신남', 'songs': [{'title': 'Uptown Funk', 'artist': 'Mark Ronson', 'url': 'https://example.com/uptown.mp3'}]},
+  {'id': 'e4', 'icon': '🧘', 'name': '평온', 'songs': [{'title': 'Calm Instrumental', 'artist': 'Various', 'url': 'https://example.com/calm.mp3'}]},
+  {'id': 'e5', 'icon': '😡', 'name': '분노', 'songs': []},
+  {'id': 'e6', 'icon': '😴', 'name': '피곤', 'songs': [{'title': 'Lullaby', 'artist': 'Sleepy Tunes', 'url': 'https://example.com/lullaby.mp3'}]},
   {'id': 'e7', 'icon': '🤔', 'name': '고민', 'songs': []},
-  {'id': 'e8', 'icon': '🤪', 'name': '장난', 'songs': [{'title': 'Funny Beat', 'artist': 'Comedian D'}]},
+  {'id': 'e8', 'icon': '🤪', 'name': '장난', 'songs': [{'title': 'Funny Beat', 'artist': 'Comedian D', 'url': 'https://example.com/funny.mp3'}]},
 ];
 
-// 사용자가 선택할 수 있는 이모지 목록
 final List<String> availableEmojis = [
   '😊', '😭', '🥳', '😎', '😜', '🧐', '😡', '🤯',
   '🫠', '🥺', '🤯', '😍', '😇', '🤩', '🥲', '🥰',
@@ -63,17 +61,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   String _currentSong = '재생 중인 노래 없음';
   String _currentEmotion = '';
-  // ⭐ 노래 재생 상태 (일시 정지/재생)
   bool _isPlaying = false;
   String? _deletingEmotionId;
-  // ⭐ 재생 위치 더미 상태 (초 단위)
   double _currentPosition = 0.0;
-  double _totalDuration = 180.0; // 3분 0초
-
-  // ⭐ 안내 메시지 표시 상태
+  double _totalDuration = 180.0;
   bool _showNoSongMessage = false;
 
-  // 시간(초)을 "분:초" 형식의 문자열로 변환하는 헬퍼 함수
   String _formatDuration(double seconds) {
     if (seconds.isNaN || seconds.isInfinite) return '0:00';
     int totalSeconds = seconds.round();
@@ -82,7 +75,6 @@ class _MainScreenState extends State<MainScreen> {
     return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
-  // 노래 재생 로직
   void _playRandomSong(Map<String, dynamic> emotion) {
     if (_deletingEmotionId != null) {
       setState(() {
@@ -94,19 +86,15 @@ class _MainScreenState extends State<MainScreen> {
     final songs = List<Map<String, dynamic>>.from(emotion['songs']);
 
     if (songs.isEmpty) {
-      // ⭐ 노래가 없을 경우 안내 메시지 표시
       setState(() {
-        // 수정됨: 하단 바에 특정 메시지 대신 '재생 중인 노래 없음' 상태 유지
         _currentSong = '재생 중인 노래 없음';
         _currentEmotion = '';
         _isPlaying = false;
         _currentPosition = 0.0;
         _totalDuration = 180.0;
-
         _showNoSongMessage = true;
       });
 
-      // 2초 후 메시지 숨김
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
@@ -114,28 +102,27 @@ class _MainScreenState extends State<MainScreen> {
           });
         }
       });
-
       return;
     }
 
-    // 무작위 노래 선택
     final randomIndex = Random().nextInt(songs.length);
     final selectedSong = songs[randomIndex];
     final songTitle = selectedSong['title'];
     final songArtist = selectedSong['artist'];
+    final songUrl = selectedSong['url']; // 실제 앱에서는 이 URL을 플레이어에 전달
 
     setState(() {
       _currentEmotion = emotion['icon'] as String;
       _currentSong = '$songTitle - $songArtist';
-      _isPlaying = true; // 노래 재생 시작
-      _currentPosition = 0.0; // 새 노래 시작 시 재생 위치 초기화
-      _showNoSongMessage = false; // 재생 시 메시지 숨김
+      _isPlaying = true;
+      _currentPosition = 0.0;
+      _showNoSongMessage = false;
     });
 
-    print('▶️ ${emotion['name']} 감정으로 $songTitle (무작위) 재생 시작');
+    print('▶️ ${emotion['name']} 감정으로 재생 시작');
+    print('   곡명: $songTitle, URL: $songUrl');
   }
 
-  // 재생/일시 정지 토글 로직
   void _togglePlayPause() {
     if (_currentSong == '재생 중인 노래 없음') {
       print('재생할 노래가 없습니다. 먼저 이모지를 선택하세요.');
@@ -147,7 +134,6 @@ class _MainScreenState extends State<MainScreen> {
     print(_isPlaying ? '▶️ 노래 재생' : '⏸️ 노래 일시 정지');
   }
 
-  // ⭐ 중지 버튼 로직
   void _stopPlayback() {
     if (_currentSong == '재생 중인 노래 없음') return;
 
@@ -156,27 +142,24 @@ class _MainScreenState extends State<MainScreen> {
       _currentEmotion = '';
       _isPlaying = false;
       _currentPosition = 0.0;
-      _showNoSongMessage = false; // 중지 시 메시지 숨김
+      _showNoSongMessage = false;
     });
     print('⏹️ 노래 재생 중지 및 상태 초기화');
   }
 
-  // 이모지 삭제 로직
   void _deleteEmotion(String id) {
     setState(() {
       emotionData.removeWhere((e) => e['id'] == id);
-      _deletingEmotionId = null; // 삭제 후 상태 리셋
-      _showNoSongMessage = false; // 삭제 시 메시지 숨김
+      _deletingEmotionId = null;
+      _showNoSongMessage = false;
 
-      // 삭제된 이모지가 현재 재생 중인 이모지였다면 상태 초기화
       if (emotionData.every((e) => e['icon'] != _currentEmotion)) {
-        _stopPlayback(); // 노래 중지 로직 재사용
+        _stopPlayback();
       }
     });
     print('✅ ID: $id 감정이 삭제되었습니다.');
   }
 
-  // 이모지 수정 다이얼로그를 띄우는 함수
   Future<void> _showEditEmotionDialog(Map<String, dynamic> emotion) async {
     if (_deletingEmotionId != null) {
       setState(() {
@@ -207,7 +190,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // 이모지 추가 다이얼로그를 띄우는 함수
   Future<void> _showAddEmotionDialog() async {
     if (_deletingEmotionId != null) {
       setState(() {
@@ -230,9 +212,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // --- UI 위젯 ---
-
-  // 버튼 스타일을 캡슐화한 헬퍼 위젯
   Widget _buildStyledButton({
     required IconData icon,
     required Color color,
@@ -259,12 +238,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 개별 이모지 타일 위젯
   Widget _buildEmotionTile(Map<String, dynamic> emotion) {
     final emotionId = emotion['id'] as String;
     final isDeleting = _deletingEmotionId == emotionId;
 
-    // 삭제 버튼 클릭 핸들러
     void handleDeletePress() {
       if (isDeleting) {
         _deleteEmotion(emotionId);
@@ -275,7 +252,6 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
 
-    // 타일 자체의 클릭 핸들러 (재생 로직은 _playRandomSong에서 삭제 대기 상태를 검사함)
     void handleTileTap() {
       if (_deletingEmotionId != null && _deletingEmotionId != emotionId) {
         setState(() {
@@ -288,7 +264,6 @@ class _MainScreenState extends State<MainScreen> {
 
     return Stack(
       children: [
-        // 1. 실제 클릭 가능한 이모지 컨텐츠 영역
         InkWell(
           onTap: handleTileTap,
           child: Container(
@@ -324,21 +299,18 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
 
-        // 2. 우측 상단 버튼들
         Positioned(
           top: 0,
           right: 0,
           child: Row(
             children: [
-              // 수정 버튼: 삭제 대기 상태일 때는 숨김
               if (!isDeleting)
                 _buildStyledButton(
                   icon: Icons.edit,
                   color: Colors.blue,
-                  onPressed: () => _showEditEmotionDialog(emotion), // ⭐ 수정 다이얼로그 호출
+                  onPressed: () => _showEditEmotionDialog(emotion),
                 ),
 
-              // 삭제 버튼: 상태에 따라 아이콘 변경 (기본: delete, 대기: close/X)
               _buildStyledButton(
                 icon: isDeleting ? Icons.close : Icons.delete,
                 color: isDeleting ? Colors.red.shade700 : Colors.red,
@@ -351,9 +323,8 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 배경 탭 시 삭제 대기 상태 리셋을 위한 위젯
   Widget _buildBodyContent(BuildContext context) {
-    return Stack( // ⭐ Stack을 사용하여 메시지 오버레이 구현
+    return Stack(
       children: <Widget>[
         Column(
           children: <Widget>[
@@ -390,9 +361,8 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
 
-        // ⭐ 안내 메시지 오버레이
         Positioned(
-          bottom: 120, // 하단 재생 바 위에 위치
+          bottom: 120,
           left: 0,
           right: 0,
           child: AnimatedOpacity(
@@ -402,7 +372,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7), // 검은색 배경
+                  color: Colors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -428,7 +398,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 이모지 추가 버튼 위젯
   Widget _buildAddEmotionButton() {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -470,7 +439,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 하단 재생 바 위젯 (수정됨)
   Widget _buildPlaybackBar() {
     final isActive = _currentSong != '재생 중인 노래 없음';
     final playPauseIcon = _isPlaying ? Icons.pause : Icons.play_arrow;
@@ -483,11 +451,10 @@ class _MainScreenState extends State<MainScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. 진행바 및 시간 표시
           Row(
             children: [
               Text(
-                _formatDuration(_currentPosition), // 현재 시각
+                _formatDuration(_currentPosition),
                 style: TextStyle(
                   color: isActive ? Colors.white70 : Colors.transparent,
                   fontSize: 18,
@@ -500,7 +467,6 @@ class _MainScreenState extends State<MainScreen> {
                     inactiveTrackColor: Colors.grey.shade700,
                     thumbColor: appBarColor,
                     overlayColor: appBarColor.withOpacity(0.4),
-                    // 비활성 상태일 때 thumbShape와 overlayShape를 아예 없애버림
                     thumbShape: isActive ? const RoundSliderThumbShape(enabledThumbRadius: 6.0) : SliderComponentShape.noThumb,
                     overlayShape: isActive ? const RoundSliderOverlayShape(overlayRadius: 14.0) : SliderComponentShape.noOverlay,
                   ),
@@ -518,7 +484,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
               Text(
-                _formatDuration(_totalDuration), // 노래 전체 시각
+                _formatDuration(_totalDuration),
                 style: TextStyle(
                   color: isActive ? Colors.white70 : Colors.transparent,
                   fontSize: 18,
@@ -527,13 +493,11 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
 
-          // 2. 노래 정보 및 컨트롤 버튼
           Row(
             children: <Widget>[
-              // 이모지 및 노래 정보
               Text(
                 _currentEmotion,
-                style: const TextStyle(fontSize: 36, color: Colors.white), // 폰트 24 -> 36
+                style: const TextStyle(fontSize: 36, color: Colors.white),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -542,14 +506,14 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     const Text(
                       '현재 재생 중:',
-                      style: TextStyle(color: Colors.white70, fontSize: 15), // 폰트 10 -> 15
+                      style: TextStyle(color: Colors.white70, fontSize: 15),
                     ),
                     Text(
                       _currentSong,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 24, // 폰트 16 -> 24
+                        fontSize: 24,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -557,14 +521,12 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
-              // 중지 버튼
               IconButton(
-                icon: const Icon(Icons.stop, color: Colors.white, size: 45), // 아이콘 30 -> 45
+                icon: const Icon(Icons.stop, color: Colors.white, size: 45),
                 onPressed: isActive ? _stopPlayback : null,
               ),
-              // 재생/일시 정지 버튼
               IconButton(
-                icon: Icon(playPauseIcon, color: Colors.white, size: 45), // 아이콘 30 -> 45
+                icon: Icon(playPauseIcon, color: Colors.white, size: 45),
                 onPressed: isActive ? _togglePlayPause : null,
               ),
             ],
@@ -593,10 +555,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-
-// =========================================================
-// 이모지 추가 다이얼로그
-// =========================================================
 
 class _AddEmotionDialog extends StatefulWidget {
   final Color appBarColor;
@@ -631,7 +589,7 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
       'id': 'e_${DateTime.now().microsecondsSinceEpoch}',
       'icon': emojiIcon,
       'name': emotionName,
-      'songs': <Map<String, dynamic>>[], // 노래 객체 목록으로 변경
+      'songs': <Map<String, dynamic>>[],
     };
 
     Navigator.of(context).pop(newEmotion);
@@ -650,7 +608,6 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // 1. 제목 및 닫기 버튼
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -669,7 +626,6 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
 
               const SizedBox(height: 20),
 
-              // 2. 이모지 선택 영역
               const Text('이모지 선택', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Wrap(
@@ -705,7 +661,6 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
 
               const SizedBox(height: 15),
 
-              // 3. 또는 직접 입력 필드
               TextField(
                 controller: _emojiInputController,
                 decoration: InputDecoration(
@@ -731,7 +686,6 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
 
               const SizedBox(height: 20),
 
-              // 4. 감정 이름 입력 필드
               const Text('감정 이름', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               TextField(
@@ -748,7 +702,6 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
 
               const SizedBox(height: 30),
 
-              // 5. 취소 / 추가하기 버튼
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
@@ -791,15 +744,10 @@ class _AddEmotionDialogState extends State<_AddEmotionDialog> {
   }
 }
 
-// =========================================================
-// 감정 수정 다이얼로그 (새로운 위젯)
-// =========================================================
-
 class _EditEmotionDialog extends StatefulWidget {
   final Color appBarColor;
   final String emotionIcon;
   final String emotionName;
-  // 노래 데이터 구조가 변경되었습니다.
   final List<Map<String, dynamic>> initialSongs;
 
   const _EditEmotionDialog({
@@ -814,15 +762,17 @@ class _EditEmotionDialog extends StatefulWidget {
 }
 
 class _EditEmotionDialogState extends State<_EditEmotionDialog> {
-  // 다이얼로그 내부에서 관리될 노래 목록
   late List<Map<String, dynamic>> _songs;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _artistController = TextEditingController();
+  final TextEditingController _urlController = TextEditingController();
+
+  // 0: URL (Default), 1: File
+  int _selectedSourceType = 0;
 
   @override
   void initState() {
     super.initState();
-    // 초기 노래 목록을 복사하여 내부 상태로 사용합니다.
     _songs = List<Map<String, dynamic>>.from(widget.initialSongs);
   }
 
@@ -830,23 +780,41 @@ class _EditEmotionDialogState extends State<_EditEmotionDialog> {
   void dispose() {
     _titleController.dispose();
     _artistController.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
-  // 노래 목록에서 항목을 삭제하는 로직
   void _deleteSong(int index) {
     setState(() {
       _songs.removeAt(index);
     });
   }
 
-  // 새 노래를 목록에 추가하는 로직
   void _addSong() {
     final title = _titleController.text.trim();
     final artist = _artistController.text.trim();
+    final url = _urlController.text.trim();
 
     if (title.isEmpty) {
       print('오류: 노래 제목은 필수입니다.');
+      return;
+    }
+
+    // 파일 업로드 모드인 경우 (미구현 상태) 추가 차단
+    if (_selectedSourceType == 1) {
+      // Replace SnackBar with Dialog for Z-Index fix
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          content: const Text('아직 미구현된 기능입니다. 공개 URL 방식을 이용해주세요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
@@ -854,16 +822,16 @@ class _EditEmotionDialogState extends State<_EditEmotionDialog> {
       _songs.add({
         'title': title,
         'artist': artist.isNotEmpty ? artist : '알 수 없는 아티스트',
+        'url': url.isNotEmpty ? url : 'https://example.com/default.mp3', // URL 저장
       });
-      // 입력 필드 초기화
+
       _titleController.clear();
       _artistController.clear();
+      _urlController.clear();
     });
   }
 
-  // 변경된 노래 목록을 메인 화면으로 반환
   void _saveChanges() {
-    // 다이얼로그를 닫고 수정된 노래 목록을 반환합니다.
     Navigator.of(context).pop(_songs);
   }
 
@@ -875,179 +843,270 @@ class _EditEmotionDialogState extends State<_EditEmotionDialog> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // 1. 제목 및 닫기 버튼
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '노래 관리', // 제목 변경
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // 2. 이모지 정보 표시
-            Center(
-              child: Column(
+        // ⭐ Column을 SingleChildScrollView로 감싸서 스크롤 가능하게 변경
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.emotionIcon,
-                    style: const TextStyle(fontSize: 48),
+                  const Text(
+                    '노래 관리',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    widget.emotionName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 3. 노래 목록
-            Text(
-              '노래 목록 (${_songs.length}개)',
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-            const SizedBox(height: 10),
-
-            // 노래 목록 리스트 뷰
-            LimitedBox(
-              maxHeight: 200, // 최대 높이 제한
-              child: _songs.isEmpty
-                  ? const Center(
-                child: Text('할당된 노래가 없습니다.', style: TextStyle(color: Colors.grey)),
-              )
-                  : ListView.builder(
-                shrinkWrap: true,
-                itemCount: _songs.length,
-                itemBuilder: (context, index) {
-                  final song = _songs[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      // ⭐ 원형 배경 추가
-                      width: 24, // 원의 크기
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: widget.appBarColor, // 민트색 배경
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}', // 순서 번호
-                          style: const TextStyle(
-                            color: Colors.black, // 텍스트는 검은색으로
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    title: Text(song['title'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
-                    subtitle: Text(song['artist'] as String, style: const TextStyle(fontSize: 12)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => _deleteSong(index),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 4. 새 노래 추가 필드
-            const Text('새 노래 추가', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                hintText: '노래 제목',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _artistController,
-              decoration: const InputDecoration(
-                hintText: '아티스트 (선택 사항)',
-                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 노래 추가 버튼
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _addSong,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('노래 추가'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.appBarColor.withOpacity(0.2),
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  elevation: 0,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // 5. 취소 / 저장하기 버튼
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Expanded(
-                  child: ElevatedButton(
+                  IconButton(
+                    icon: const Icon(Icons.close),
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade200,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      widget.emotionIcon,
+                      style: const TextStyle(fontSize: 48),
                     ),
-                    child: const Text('취소', style: TextStyle(fontSize: 16)),
+                    Text(
+                      widget.emotionName,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Text(
+                '노래 목록 (${_songs.length}개)',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+              const SizedBox(height: 10),
+
+              LimitedBox(
+                maxHeight: 150,
+                child: _songs.isEmpty
+                // ⭐ 1. 빈 목록 높이 조절
+                    ? Container(
+                  height: 60,
+                  alignment: Alignment.center,
+                  child: const Text('할당된 노래가 없습니다.', style: TextStyle(color: Colors.grey)),
+                )
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _songs.length,
+                  itemBuilder: (context, index) {
+                    final song = _songs[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: widget.appBarColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      title: Text(song['title'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      subtitle: Text(song['artist'] as String, style: const TextStyle(fontSize: 12)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _deleteSong(index),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text('새 노래 추가', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  hintText: '노래 제목',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _artistController,
+                decoration: const InputDecoration(
+                  hintText: '아티스트 (선택 사항)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // 소스 선택 버튼 (URL / 파일)
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedSourceType = 0; // URL 모드
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedSourceType == 0 ? widget.appBarColor.withOpacity(0.2) : Colors.transparent,
+                          border: Border.all(color: _selectedSourceType == 0 ? widget.appBarColor : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(child: Text('공개 URL', style: TextStyle(fontWeight: FontWeight.bold))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedSourceType = 1; // 파일 모드
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedSourceType == 1 ? widget.appBarColor.withOpacity(0.2) : Colors.transparent,
+                          border: Border.all(color: _selectedSourceType == 1 ? widget.appBarColor : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(child: Text('파일 업로드', style: TextStyle(fontWeight: FontWeight.bold))),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // 선택된 모드에 따른 입력 필드
+              if (_selectedSourceType == 0)
+                TextField(
+                  controller: _urlController,
+                  decoration: const InputDecoration(
+                    hintText: 'https://example.com/song.mp3',
+                    labelText: '오디오 URL',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                )
+              else
+                InkWell(
+                  onTap: () {
+                    // ⭐ 3. 오류 메시지 우선순위 해결 (showDialog 사용)
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        content: const Text('아직 미구현된 기능입니다. 공개 URL 방식을 이용해주세요.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: const Column(
+                      children: [
+                        Icon(Icons.cloud_upload, color: Colors.grey, size: 30),
+                        SizedBox(height: 5),
+                        // ⭐ 2. 텍스트 변경
+                        Text('눌러서 파일 선택', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveChanges, // 저장 로직 연결
-                    style: ElevatedButton.styleFrom(
-                      // 민트색 계열로 버튼 스타일
-                      backgroundColor: widget.appBarColor,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 5,
-                    ),
-                    child: const Text('저장하기', style: TextStyle(fontSize: 16)), // 텍스트 변경
+
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _addSong,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('노래 추가'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.appBarColor.withOpacity(0.2),
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+
+              const SizedBox(height: 30),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade200,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      child: const Text('취소', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.appBarColor,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 5,
+                      ),
+                      child: const Text('저장하기', style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
